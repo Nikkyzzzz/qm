@@ -1,6 +1,7 @@
 import streamlit as st
 import json
 import os
+import pytz
 from datetime import datetime, timedelta
 
 # ---- SETTINGS ----
@@ -33,20 +34,21 @@ checklist_state = load_state()
 st.title("📚 Exam Checklist with Save")
 st.subheader("Persistent Tasks 1–101")
 
-from datetime import datetime, timedelta
+# ---- TIMEZONE FIX ----
+local_tz = pytz.timezone("Asia/Kolkata")
+now = datetime.now(pytz.utc).astimezone(local_tz)
 
-now = datetime.now()
+# Define 9:30 AM in local timezone
+exam_time = local_tz.localize(datetime.combine(now.date(), datetime.strptime("09:30", "%H:%M").time()))
 
-# If it's already past 9:30 AM today, set it for tomorrow
-exam_time = datetime.combine(
-    now.date(), datetime.strptime("09:30", "%H:%M").time()
-)
-if now.time() > exam_time.time():
+# If current time is after 9:30 AM, set it for the next day
+if now > exam_time:
     exam_time += timedelta(days=1)
 
+# Time left until exam
 time_left = exam_time - now
 hours_left = time_left.total_seconds() / 3600
-st.info(f"⏰ Time left until exam: **{int(hours_left)} hours and {int((hours_left%1)*60)} minutes**")
+st.info(f"⏰ Time left until exam: **{int(hours_left)} hours and {int((hours_left % 1) * 60)} minutes**")
 
 # ---- UNIT TIME ALLOCATION ----
 unit_names = ['Unit 1 (1–16)', 'Unit 2 (17–40)', 'Unit 3 (41–65)', 'Unit 4 (66–85)', 'Unit 5 (86–101)']
@@ -67,5 +69,5 @@ if st.button("💾 Save Progress"):
     save_state(checklist_state)
     st.success("Checklist progress saved successfully!")
 
-# ---- AUTO SAVE (optional) ----
+# ---- AUTO SAVE (on each reload) ----
 save_state(checklist_state)
